@@ -1,0 +1,9 @@
+{
+  "name": "cellume",
+  "buildCommand": "npm run build",
+  "outputDirectory": "dist",
+  "framework": "vite",
+  "projectSettings": {
+    "framework": "vite"
+  }
+}
