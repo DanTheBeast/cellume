@@ -1433,6 +1433,7 @@ function CellumaTracker({ user, supabase }) {
   const [draggingId, setDraggingId] = useState(null);
   const [activeDevice, setActiveDevice] = useState("celluma");
   const [clearArmed, setClearArmed] = useState(false);
+  const [deleteConfirmId, setDeleteConfirmId] = useState(null);
 
   useEffect(() => {
     try { localStorage.setItem(STORAGE_KEY, JSON.stringify(sessions)); } catch {}
@@ -1443,7 +1444,17 @@ function CellumaTracker({ user, supabase }) {
     setSessions(p => p.map(s => s.id === id ? { ...s, x: newX, y: newY } : s));
   }, []);
   const deleteSession = useCallback((id) => {
-    setSessions(p => p.filter(s => s.id !== id));
+    // Show confirmation modal instead of deleting immediately
+    setDeleteConfirmId(id);
+  }, []);
+  const confirmDelete = useCallback(() => {
+    if (deleteConfirmId) {
+      setSessions(p => p.filter(s => s.id !== deleteConfirmId));
+      setDeleteConfirmId(null);
+    }
+  }, [deleteConfirmId]);
+  const cancelDelete = useCallback(() => {
+    setDeleteConfirmId(null);
   }, []);
   const onDragStart = useCallback((id) => setDraggingId(id), []);
   const onDragEnd = useCallback(() => setDraggingId(null), []);
@@ -1668,6 +1679,87 @@ function CellumaTracker({ user, supabase }) {
               </div>
             );
           })}
+        </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {deleteConfirmId !== null && (
+        <div style={{
+          position: "fixed", top: 0, left: 0, right: 0, bottom: 0,
+          backgroundColor: "rgba(0, 0, 0, 0.3)",
+          display: "flex", alignItems: "center", justifyContent: "center",
+          zIndex: 2000,
+          fontFamily: "-apple-system, BlinkMacSystemFont, sans-serif",
+        }}>
+          <div style={{
+            background: "#ffffff",
+            borderRadius: 16,
+            padding: "24px",
+            maxWidth: 300,
+            boxShadow: "0 8px 32px rgba(217, 70, 110, 0.2)",
+            textAlign: "center",
+          }}>
+            <div style={{
+              fontSize: 16,
+              fontWeight: 600,
+              color: "#3d2728",
+              marginBottom: 8,
+            }}>
+              Delete session?
+            </div>
+            <div style={{
+              fontSize: 13,
+              color: "#8a5d68",
+              marginBottom: 20,
+              lineHeight: 1.4,
+            }}>
+              This session will be permanently removed. This action cannot be undone.
+            </div>
+            <div style={{
+              display: "flex",
+              gap: 12,
+              justifyContent: "center",
+            }}>
+              <button
+                onClick={cancelDelete}
+                style={{
+                  padding: "10px 20px",
+                  background: "#f5f5f5",
+                  border: "none",
+                  color: "#3d2728",
+                  borderRadius: 8,
+                  cursor: "pointer",
+                  fontSize: 13,
+                  fontWeight: 500,
+                  fontFamily: "inherit",
+                  transition: "all 0.15s",
+                }}
+                onMouseEnter={(e) => e.target.style.background = "#efefef"}
+                onMouseLeave={(e) => e.target.style.background = "#f5f5f5"}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmDelete}
+                style={{
+                  padding: "10px 20px",
+                  background: "#e85d75",
+                  border: "none",
+                  color: "white",
+                  borderRadius: 8,
+                  cursor: "pointer",
+                  fontSize: 13,
+                  fontWeight: 600,
+                  fontFamily: "inherit",
+                  transition: "all 0.15s",
+                }}
+                onMouseEnter={(e) => e.target.style.background = "#d9466e"}
+                onMouseLeave={(e) => e.target.style.background = "#e85d75"}
+              >
+                Delete
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>
