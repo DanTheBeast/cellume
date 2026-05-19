@@ -122,7 +122,7 @@ const DEVICES = {
     key: "celluma",
     name: "Celluma PRO",
     shape: "rect",
-    long: 75, short: 50,
+    long: 85, short: 50,
     irradiance: 22,        // mW/cm² (midpoint of 15–30)
     sessionMinutes: 30,
     fluencePerSession: 8,  // J/cm² per session (midpoint of 4–12 J/cm² range)
