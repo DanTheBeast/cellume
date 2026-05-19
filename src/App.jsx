@@ -464,15 +464,7 @@ function BodyPanel({ side, sessions, onLog, onMoveSession, onDeleteSession, pane
                   const t = e.touches[0];
                   startDragForSession(s.id, t.clientX, t.clientY);
                 }}
-                onDoubleClick={(e) => {
-                  e.stopPropagation();
-                  if (onDeleteSession) onDeleteSession(s.id);
-                }}
-                onContextMenu={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  if (onDeleteSession) onDeleteSession(s.id);
-                }}
+
               >
                 {/* Larger invisible hit target so the dot is easy to grab even when small */}
                 <circle cx={cx} cy={cy} r={Math.max(r + 4, 8)} fill="rgba(0,0,0,0.001)" />
@@ -850,8 +842,6 @@ function HandPanel({ handSide, sessions, onLog, onMoveSession, onDeleteSession,
               <g key={"h-"+s.id} style={{ pointerEvents: "all", cursor: "grab" }}
                 onMouseDown={(e) => { e.stopPropagation(); e.preventDefault(); startDragForSession(s.id, e.clientX, e.clientY); }}
                 onTouchStart={(e) => { e.stopPropagation(); const t=e.touches[0]; startDragForSession(s.id, t.clientX, t.clientY); }}
-                onDoubleClick={(e) => { e.stopPropagation(); if (onDeleteSession) onDeleteSession(s.id); }}
-                onContextMenu={(e) => { e.preventDefault(); e.stopPropagation(); if (onDeleteSession) onDeleteSession(s.id); }}
               >
                 <circle cx={cx} cy={cy} r={Math.max(r+4,8)} fill="rgba(0,0,0,0.001)" />
                 <circle cx={cx} cy={cy} r={r} fill="none"
@@ -1079,8 +1069,6 @@ function FacePartPanel({ imgSrc, viewKey, label, mirror, aspectW, aspectH,
               <g key={"h-"+s.id} style={{ pointerEvents: "all", cursor: "grab" }}
                 onMouseDown={(e) => { e.stopPropagation(); e.preventDefault(); startDragForSession(s.id, e.clientX, e.clientY); }}
                 onTouchStart={(e) => { e.stopPropagation(); const t=e.touches[0]; startDragForSession(s.id, t.clientX, t.clientY); }}
-                onDoubleClick={(e) => { e.stopPropagation(); if (onDeleteSession) onDeleteSession(s.id); }}
-                onContextMenu={(e) => { e.preventDefault(); e.stopPropagation(); if (onDeleteSession) onDeleteSession(s.id); }}
               >
                 <circle cx={cx} cy={cy} r={Math.max(r+4,8)} fill="rgba(0,0,0,0.001)" />
                 <circle cx={cx} cy={cy} r={r} fill="none"
@@ -1434,6 +1422,7 @@ function CellumaTracker({ user, supabase }) {
   const [activeDevice, setActiveDevice] = useState("celluma");
   const [clearArmed, setClearArmed] = useState(false);
   const [deleteConfirmId, setDeleteConfirmId] = useState(null);
+  const [deletedSessions, setDeletedSessions] = useState([]);
 
   useEffect(() => {
     try { localStorage.setItem(STORAGE_KEY, JSON.stringify(sessions)); } catch {}
@@ -1449,12 +1438,25 @@ function CellumaTracker({ user, supabase }) {
   }, []);
   const confirmDelete = useCallback(() => {
     if (deleteConfirmId) {
-      setSessions(p => p.filter(s => s.id !== deleteConfirmId));
+      const sessionToDelete = sessions.find(s => s.id === deleteConfirmId);
+      if (sessionToDelete) {
+        // Save to deleted sessions (keep last 20)
+        setDeletedSessions(p => [{ ...sessionToDelete, deletedAt: Date.now() }, ...p].slice(0, 20));
+        // Remove from active sessions
+        setSessions(p => p.filter(s => s.id !== deleteConfirmId));
+      }
       setDeleteConfirmId(null);
     }
-  }, [deleteConfirmId]);
+  }, [deleteConfirmId, sessions]);
   const cancelDelete = useCallback(() => {
     setDeleteConfirmId(null);
+  }, []);
+  const restoreSession = useCallback((deletedSession) => {
+    // Remove the deletedAt property and restore to active sessions
+    const { deletedAt, ...sessionData } = deletedSession;
+    setSessions(p => [...p, sessionData]);
+    // Remove from deleted sessions
+    setDeletedSessions(p => p.filter(s => s.id !== deletedSession.id));
   }, []);
   const onDragStart = useCallback((id) => setDraggingId(id), []);
   const onDragEnd = useCallback(() => setDraggingId(null), []);
@@ -1646,7 +1648,7 @@ function CellumaTracker({ user, supabase }) {
             display: "flex", justifyContent: "space-between", alignItems: "baseline",
           }}>
             <span style={{ fontSize: 13, fontWeight: 600, color: "#9a6f78" }}>Recent sessions</span>
-            <span style={{ fontSize: 10, color: "#b09098" }}>tap × to remove</span>
+            <span style={{ fontSize: 10, color: "#b09098" }}>tap delete to remove</span>
           </div>
           {[...sessions].reverse().slice(0, 10).map((s) => {
             const hrs = (Date.now() - s.timestamp) / 3600000;
@@ -1679,6 +1681,67 @@ function CellumaTracker({ user, supabase }) {
               </div>
             );
           })}
+        </div>
+      )}
+
+      {/* Recently Deleted Sessions Section */}
+      {deletedSessions.length > 0 && (
+        <div style={{
+          width: "100%", maxWidth: 420,
+          background: "#ffffff",
+          borderRadius: 16,
+          boxShadow: "0 2px 12px rgba(217,70,110,0.08)",
+          padding: "14px 16px",
+          fontFamily: "-apple-system, BlinkMacSystemFont, sans-serif",
+          marginBottom: 16,
+          border: "1px solid #fde8eb",
+        }}>
+          <div style={{
+            marginBottom: 10, paddingBottom: 8,
+            borderBottom: "1px solid #fce8eb",
+            display: "flex", justifyContent: "space-between", alignItems: "baseline",
+          }}>
+            <span style={{ fontSize: 13, fontWeight: 600, color: "#d9466e" }}>Recently deleted</span>
+            <span style={{ fontSize: 10, color: "#c97a8f" }}>{deletedSessions.length} sessions</span>
+          </div>
+          {deletedSessions.slice(0, 5).map((s) => {
+            const hrs = (Date.now() - s.deletedAt) / 3600000;
+            const age = hrs < 1 ? "just now" : hrs < 24 ? `${Math.floor(hrs)}h ago` : `${Math.floor(hrs/24)}d ago`;
+            const sDev = DEVICES[s.device];
+            const loc = ((s.view || s.side) || "").replace("hand-", "").replace("face-", "").replace(/-/g, " ");
+            return (
+              <div key={s.id} style={{
+                display: "flex", alignItems: "center", padding: "8px 0",
+                borderBottom: "1px solid #fdf0f2", gap: 10,
+                opacity: 0.75,
+              }}>
+                <span style={{ color: "#3d2728", flex: 1, fontWeight: 500, fontSize: 12 }}>{sDev.name}</span>
+                <span style={{ color: "#8a5d68", fontSize: 11, width: 100 }}>{loc}</span>
+                <span style={{ color: "#b88891", width: 56, textAlign: "right", fontSize: 11 }}>{age}</span>
+                <button
+                  onClick={() => restoreSession(s)}
+                  aria-label="Restore session"
+                  style={{
+                    background: "#e8f4f8",
+                    border: "none",
+                    color: "#2c7a94",
+                    borderRadius: 8,
+                    width: 24, height: 24,
+                    cursor: "pointer",
+                    fontSize: 13, lineHeight: 1,
+                    fontFamily: "-apple-system, BlinkMacSystemFont, sans-serif",
+                    padding: 0, fontWeight: 600,
+                  }}
+                  title="Restore this session"
+                >↺</button>
+              </div>
+            );
+          })}
+          {deletedSessions.length > 5 && (
+            <div style={{ fontSize: 10, color: "#b09098", padding: "8px 0", textAlign: "center" }}>
+              +{deletedSessions.length - 5} more
+            </div>
+          )}
         </div>
       )}
 
