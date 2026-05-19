@@ -437,54 +437,10 @@ function BodyPanel({ side, sessions, onLog, onMoveSession, onDeleteSession, pane
           })()}
         </svg>
 
-        {/* Drag handles — small rings (no fill) sized proportional to device, so the heat color shows through. */}
-        <svg style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%", pointerEvents: "none" }}>
-          {mySessions.slice(-50).map((s) => {
-            const sDev = DEVICES[s.device];
-            const cx = sDev.shape === "rect" ? s.x + sDev.short / 2 : s.x;
-            const cy = sDev.shape === "rect" ? s.y + sDev.long / 2 : s.y;
-            const decay = decayFactor(s.timestamp);
-            if (decay <= 0) return null;
-            const isActive = s.id === draggingId;
 
-            // Universal small handle size — same as the Hooga Torch dot.
-            const baseR = 2.5;
-            const r = isActive ? baseR + 1.5 : baseR;
-            const sw = isActive ? 1.8 : 1.2;
-
-            return (
-              <g key={"h-" + s.id} style={{ pointerEvents: "all", cursor: "grab" }}
-                onMouseDown={(e) => {
-                  e.stopPropagation();
-                  e.preventDefault();
-                  startDragForSession(s.id, e.clientX, e.clientY);
-                }}
-                onTouchStart={(e) => {
-                  e.stopPropagation();
-                  const t = e.touches[0];
-                  startDragForSession(s.id, t.clientX, t.clientY);
-                }}
-
-              >
-                {/* Larger invisible hit target so the dot is easy to grab even when small */}
-                <circle cx={cx} cy={cy} r={Math.max(r + 4, 8)} fill="rgba(0,0,0,0.001)" />
-                {/* Visible ring */}
-                <circle cx={cx} cy={cy} r={r}
-                  fill="none"
-                  stroke={isActive ? "rgba(255,255,255,1)" : "rgba(255,255,255,0.85)"}
-                  strokeWidth={sw}
-                />
-                {/* Tiny center pip so it's findable on busy heatmaps */}
-                <circle cx={cx} cy={cy} r={0.8}
-                  fill="rgba(255,255,255,0.85)"
-                />
-              </g>
-            );
-          })}
-        </svg>
       </div>
       <div style={{ fontSize: 10, color: "#b09098", fontFamily: "-apple-system, BlinkMacSystemFont, sans-serif", textAlign: "center", maxWidth: DISPLAY_W, lineHeight: 1.5 }}>
-        Tap to place · drag to adjust · double-tap to remove
+        Tap to place sessions
       </div>
     </div>
   );
@@ -824,33 +780,7 @@ function HandPanel({ handSide, sessions, onLog, onMoveSession, onDeleteSession,
           })()}
         </svg>
 
-        {/* Drag handles — interactive layer */}
-        <svg viewBox={`0 0 ${HAND_W} ${HAND_H}`} width="100%" height="100%"
-          preserveAspectRatio="none"
-          style={{ position: "absolute", top: 0, left: 0, pointerEvents: "none" }}>
-          {mySessions.slice(-50).map(s => {
-            const sDev = scaledDeviceDims(DEVICES[s.device], view);
-            const cx = sDev.shape === "rect" ? s.x + sDev.short/2 : s.x;
-            const cy = sDev.shape === "rect" ? s.y + sDev.long/2 : s.y;
-            const decay = decayFactor(s.timestamp);
-            if (decay <= 0) return null;
-            const isActive = s.id === draggingId;
-            const baseR = 2.5;
-            const r = isActive ? baseR + 1.5 : baseR;
-            const sw = isActive ? 1.8 : 1.2;
-            return (
-              <g key={"h-"+s.id} style={{ pointerEvents: "all", cursor: "grab" }}
-                onMouseDown={(e) => { e.stopPropagation(); e.preventDefault(); startDragForSession(s.id, e.clientX, e.clientY); }}
-                onTouchStart={(e) => { e.stopPropagation(); const t=e.touches[0]; startDragForSession(s.id, t.clientX, t.clientY); }}
-              >
-                <circle cx={cx} cy={cy} r={Math.max(r+4,8)} fill="rgba(0,0,0,0.001)" />
-                <circle cx={cx} cy={cy} r={r} fill="none"
-                  stroke={isActive ? "rgba(0,0,0,1)" : "rgba(0,0,0,0.85)"} strokeWidth={sw} />
-                <circle cx={cx} cy={cy} r={0.8} fill="rgba(0,0,0,0.85)" />
-              </g>
-            );
-          })}
-        </svg>
+
       </div>
     </div>
   );
@@ -1051,33 +981,7 @@ function FacePartPanel({ imgSrc, viewKey, label, mirror, aspectW, aspectH,
           })()}
         </svg>
 
-        {/* Drag handles */}
-        <svg viewBox={`0 0 ${W} ${H}`} width="100%" height="100%"
-          preserveAspectRatio="none"
-          style={{ position: "absolute", top: 0, left: 0, pointerEvents: "none" }}>
-          {mySessions.slice(-50).map(s => {
-            const sDev = scaledDeviceDims(DEVICES[s.device], viewKey);
-            const cx = sDev.shape === "rect" ? s.x + sDev.short/2 : s.x;
-            const cy = sDev.shape === "rect" ? s.y + sDev.long/2 : s.y;
-            const decay = decayFactor(s.timestamp);
-            if (decay <= 0) return null;
-            const isActive = s.id === draggingId;
-            const baseR = 2.5;
-            const r = isActive ? baseR + 1.5 : baseR;
-            const sw = isActive ? 1.8 : 1.2;
-            return (
-              <g key={"h-"+s.id} style={{ pointerEvents: "all", cursor: "grab" }}
-                onMouseDown={(e) => { e.stopPropagation(); e.preventDefault(); startDragForSession(s.id, e.clientX, e.clientY); }}
-                onTouchStart={(e) => { e.stopPropagation(); const t=e.touches[0]; startDragForSession(s.id, t.clientX, t.clientY); }}
-              >
-                <circle cx={cx} cy={cy} r={Math.max(r+4,8)} fill="rgba(0,0,0,0.001)" />
-                <circle cx={cx} cy={cy} r={r} fill="none"
-                  stroke={isActive ? "rgba(0,0,0,1)" : "rgba(0,0,0,0.85)"} strokeWidth={sw} />
-                <circle cx={cx} cy={cy} r={0.8} fill="rgba(0,0,0,0.85)" />
-              </g>
-            );
-          })}
-        </svg>
+
       </div>
     </div>
   );
