@@ -1323,7 +1323,7 @@ function CellumaTracker({ user, supabase }) {
   });
   const [panelAngle, setPanelAngle] = useState(0);
   const [draggingId, setDraggingId] = useState(null);
-  const [activeDevice, setActiveDevice] = useState("celluma");
+  const [activeDevice, setActiveDevice] = useState("torch");
   const [clearArmed, setClearArmed] = useState(false);
   const [deleteConfirmId, setDeleteConfirmId] = useState(null);
   const [deletedSessions, setDeletedSessions] = useState([]);
